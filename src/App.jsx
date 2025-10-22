@@ -1,7 +1,14 @@
-// src/pages/App.jsx
+// src/App.jsx
 import React from "react"
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
-import Siembra from "./Siembra"
+
+// 👇 IMPORTS desde la carpeta /pages
+import Resumen from "./pages/Resumen"
+import Siembra from "./pages/Siembra"
+import Cosecha from "./pages/Cosecha"
+import Procesamiento from "./pages/Procesamiento"
+import Config from "./pages/Config"
+import Login from "./pages/Login"
 
 export default function App() {
   return (
@@ -38,6 +45,9 @@ export default function App() {
             <Link to="/config" style={{ color: "#fff", textDecoration: "none" }}>
               Configuraciones
             </Link>
+            <Link to="/login" style={{ color: "#fff", textDecoration: "none" }}>
+              Login
+            </Link>
           </nav>
 
           <div style={{ marginTop: "auto" }}>
@@ -65,8 +75,14 @@ export default function App() {
         {/* Contenido principal */}
         <main style={{ flex: 1, padding: "24px" }}>
           <Routes>
+            <Route path="/" element={<Resumen />} />
             <Route path="/siembra" element={<Siembra />} />
-            <Route path="/" element={<Siembra />} /> {/* Página por defecto */}
+            <Route path="/cosecha" element={<Cosecha />} />
+            <Route path="/procesamiento" element={<Procesamiento />} />
+            <Route path="/config" element={<Config />} />
+            <Route path="/login" element={<Login />} />
+            {/* por si cae una ruta desconocida, lo mando al Resumen */}
+            <Route path="*" element={<Resumen />} />
           </Routes>
         </main>
       </div>
