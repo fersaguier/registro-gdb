@@ -1,7 +1,11 @@
+// src/lib/supabase.js
 import { createClient } from '@supabase/supabase-js'
 
-const url  = import.meta.env.VITE_SUPABASE_URL
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY
-if(!url || !anon) console.warn('Faltan VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY')
+// Cliente normal con tus credenciales (ya definidas en Render)
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
 
-export const supabase = createClient(url, anon)
+// 👇 Cliente apuntando explícitamente al esquema "app"
+export const db = supabase.schema('app')
