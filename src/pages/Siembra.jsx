@@ -17,6 +17,7 @@ export default function Siembra() {
   const [plantas, setPlantas] = useState(0)
   const [hidro, setHidro] = useState(false)
   const [msg, setMsg] = useState('')
+console.log('[ENV]', import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY?.slice(0,8)+'...')
 
   useEffect(() => {
     (async () => {
