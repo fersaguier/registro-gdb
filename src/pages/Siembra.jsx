@@ -12,134 +12,156 @@ export default function Siembra() {
   const [productoId, setProductoId] = useState('')
   const [variedadId, setVariedadId] = useState('')
   const [invernaderoId, setInvernaderoId] = useState('')
-
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0,10))
   const [plantas, setPlantas] = useState(0)
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0,10))
   const [hidro, setHidro] = useState(false)
-  const [msg, setMsg] = useState('')
-console.log('[ENV]', import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY?.slice(0,8)+'...')
 
+  const [status, setStatus] = useState('Cargando…')
+  const [error, setError] = useState('')
+
+  // Carga inicial: EMPRESAS
   useEffect(() => {
     (async () => {
+      setStatus('Cargando empresas…')
       const { data, error } = await db
         .from('empresas')
         .select('id, nombre, codigo')
-        .order('codigo')
-      if (!error) setEmpresas(data || [])
+        .order('codigo', { ascending: true })
+      if (error) {
+        console.error('empresas error:', error)
+        setError('No pude leer empresas: ' + error.message)
+      } else {
+        setEmpresas(data || [])
+        setStatus('')
+      }
     })()
   }, [])
 
+  // Al elegir EMPRESA: PRODUCTOS + INVERNADEROS
   useEffect(() => {
     if (!empresaId) return
     ;(async () => {
-      const [{ data: prods }, { data: invs }] = await Promise.all([
-        db.from('productos').select('id, nombre, codigo').eq('empresa_id', empresaId),
-        db.from('invernaderos').select('id, nombre, codigo').eq('empresa_id', empresaId),
+      setStatus('Cargando productos e invernaderos…')
+      const [{ data: prods, error: e1 }, { data: invs, error: e2 }] = await Promise.all([
+        db.from('productos').select('id, nombre, codigo').eq('empresa_id', empresaId).order('codigo'),
+        db.from('invernaderos').select('id, nombre, codigo').eq('empresa_id', empresaId).order('codigo'),
       ])
-      setProductos(prods || [])
-      setInvernaderos(invs || [])
+      if (e1 || e2) {
+        console.error('productos/invernaderos error:', e1 || e2)
+        setError('No pude leer productos/invernaderos.')
+      } else {
+        setProductos(prods || [])
+        setInvernaderos(invs || [])
+      }
+      setProductoId('')
+      setVariedadId('')
+      setInvernaderoId('')
+      setStatus('')
     })()
   }, [empresaId])
 
+  // Al elegir PRODUCTO: VARIEDADES
   useEffect(() => {
     if (!productoId) return
     ;(async () => {
-      const { data } = await db
+      setStatus('Cargando variedades…')
+      const { data, error } = await db
         .from('variedades')
         .select('id, nombre, codigo')
         .eq('producto_id', productoId)
-      setVariedades(data || [])
+        .order('codigo')
+      if (error) {
+        console.error('variedades error:', error)
+        setError('No pude leer variedades.')
+      } else {
+        setVariedades(data || [])
+      }
+      setVariedadId('')
+      setStatus('')
     })()
   }, [productoId])
 
   async function crearSiembra(e) {
     e.preventDefault()
+    setError('')
     if (!empresaId || !productoId || !variedadId || !invernaderoId) {
-      setMsg('⚠️ Faltan campos obligatorios')
+      setError('⚠️ Faltan campos obligatorios')
       return
     }
+    setStatus('Guardando…')
     const { error } = await db.from('siembras').insert({
       empresa_id: empresaId,
       producto_id: productoId,
       variedad_id: variedadId,
       invernadero_id: invernaderoId,
       fecha_siembra: fecha,
-      plantas: plantas || 0,
-      hidroponia: hidro,
+      plantas: Number(plantas) || 0,
+      hidroponia: !!hidro,
     })
-    if (error) setMsg('❌ Error: ' + error.message)
-    else setMsg('✅ Siembra registrada correctamente')
+    if (error) {
+      console.error('insert error:', error)
+      setError('No pude guardar: ' + error.message)
+    } else {
+      setStatus('✅ Siembra registrada')
+      setTimeout(() => setStatus(''), 2000)
+    }
   }
 
   return (
-    <div style={{ maxWidth: 1000 }}>
+    <div>
       <h2>Crear siembra</h2>
 
+      {(status || error) && (
+        <div style={{marginBottom:12}}>
+          {status && <div>{status}</div>}
+          {error && <div style={{color:'#b00020'}}>{error}</div>}
+        </div>
+      )}
+
       <form onSubmit={crearSiembra} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {/* Empresa */}
         <select value={empresaId} onChange={e => setEmpresaId(e.target.value)}>
-          <option value="">Empresa...</option>
+          <option value="">Empresa…</option>
           {empresas.map(e => (
-            <option key={e.id} value={e.id}>
-              {e.codigo} — {e.nombre}
-            </option>
+            <option key={e.id} value={e.id}>{e.codigo} — {e.nombre}</option>
           ))}
         </select>
 
+        {/* Producto */}
         <select value={productoId} onChange={e => setProductoId(e.target.value)}>
-          <option value="">Producto...</option>
+          <option value="">Producto…</option>
           {productos.map(p => (
-            <option key={p.id} value={p.id}>
-              {p.codigo} — {p.nombre}
-            </option>
+            <option key={p.id} value={p.id}>{p.codigo} — {p.nombre}</option>
           ))}
         </select>
 
+        {/* Variedad */}
         <select value={variedadId} onChange={e => setVariedadId(e.target.value)}>
-          <option value="">Variedad...</option>
+          <option value="">Variedad…</option>
           {variedades.map(v => (
-            <option key={v.id} value={v.id}>
-              {v.codigo} — {v.nombre}
-            </option>
+            <option key={v.id} value={v.id}>{v.codigo} — {v.nombre}</option>
           ))}
         </select>
 
+        {/* Invernadero */}
         <select value={invernaderoId} onChange={e => setInvernaderoId(e.target.value)}>
-          <option value="">Invernadero...</option>
+          <option value="">Invernadero…</option>
           {invernaderos.map(i => (
-            <option key={i.id} value={i.id}>
-              {i.codigo} — {i.nombre}
-            </option>
+            <option key={i.id} value={i.id}>{i.codigo} — {i.nombre}</option>
           ))}
         </select>
 
         <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
-        <input
-          type="number"
-          placeholder="Plantas"
-          value={plantas}
-          onChange={e => setPlantas(e.target.value)}
-        />
+        <input type="number" value={plantas} onChange={e => setPlantas(e.target.value)} placeholder="Plantas" />
 
         <label style={{ gridColumn: '1 / -1' }}>
           <input type="checkbox" checked={hidro} onChange={e => setHidro(e.target.checked)} /> Hidroponía
         </label>
 
-        <button
-          type="submit"
-          style={{
-            gridColumn: '1 / -1',
-            backgroundColor: '#046A38',
-            color: '#fff',
-            padding: '10px',
-            border: 'none',
-            borderRadius: 6,
-          }}
-        >
+        <button type="submit" style={{ gridColumn: '1 / -1', background:'#046A38', color:'#fff', border:'none', borderRadius:6, padding:'10px' }}>
           Crear
         </button>
       </form>
-
-      {msg && <p style={{ marginTop: 10 }}>{msg}</p>}
     </div>
   )
 }
